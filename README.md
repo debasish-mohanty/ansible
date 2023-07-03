@@ -1,61 +1,95 @@
-# Ansible Learnings
+Ansible Tower Installation
+System configuration
 
-## Pre-Requisite
+Disable Selinux
 
-###      1) OpenSSH-Server on all hosts installed and configured as a systemctl service. Incase if you dont have it install it using "sudo apt install openssh-server"
-###      2) Firewall Corporate & OS level firewall allowing shh connections. For Example "ufw allow ssh"
-###      3) GIT installed. Verify using command "which git" incase its not available get it using "sudo apt install git"
- 
+Ban Selinux internal nuclear safety mechanism
 
-## Generate SSH KeyPair for Ansible engine to connect to the desired hosts.  This doesnot have password associated with private key, thus its paramount to safekeep and protect the keypair. 
-### ssh-keygen -t ed25519 -C ansible_master_key  # Give Proper Path e.g. ~/.ssh/id_ansible_master_key There will be two files created by this command.
+setenforce 0 sed -ri 's/^(SELINUX=).*/\1disabled/g' /etc/selinux/config
 
+Check Selinux status
 
-## Generate default KeyPair for logging into the Ansible Host Server, Commit changes to Github.
-### ssh-keygen -t ed25519 -C Debasish_Key # Give Proper Path e.g. ~/.ssh/id_Debasish_key, There will be two files created by this command.
+sestatus -v
 
-## Create an alias by editing your specific .bashrc file
-### vi .bashrc
-###     alias sshd='eval $(ssh-agent -s) && ssh-add ~/.ssh/id_25519_Debasish'
-###     :wq
-### . .bashrc
+Disable Firewalld
 
-## Activate the SSH-AGENT and supply your specific password for default keypair.
+systemctl disable firewalld --now
 
-### sshd
+Check the firewalld firewall status
 
-## Create your Repo on GitHub and Add your default keypair (~/.ssh/id_25519_Debasish.pub) to GitHub UI > Setting > SSH & PGP .  
-## Add the SSH public key to github. As its a public key its perfectly safe to add it on public repo.
+firewall-cmd 
+systemctl status firewalld
+Install Ansible Tower
 
-## Go back to your Instance and login. 
-### Run "git clone" command to clone your repo from gitHub. Make sure you choose the link for SSH Under CODE.
- 
-### git clone git@github.com:debasish-mohanty/ansible.git
+This article demonstrates that installation using setup-bundle ( can be understood as a one-key offline installation package ), official download source https://releases.ansible.com/ansible-tower
+Download Package and Extract
+mkdir -p /tmp/tower
+cd /tmp/tower
+curl -sqL https://releases.ansible.com/ansible-tower/setup-bundle/ansible-tower-setup-bundle-3.8.3-1.tar.gz | tar zxvf -
 
-## Now you will see your GitHub repo is cloned on your machine.
+Edit 'inventory' File
 
-## We need to configure basic metadata for our github setup.
-### cd ansible
-### git config --global user.name "Debasish Mohanty"
-### git config --global user.email "debasishmohanty@hotmail.com"
+Edit ansible-tower-setup-bundle-3.8.3-1/inventory Guidance list, fill in the user password part, refer to the following configuration. Below is just a reference for a single instance tower server.
 
-## Verify the same has been properly configured 
-### cat ~/.gitconfig
+cd ansible-tower-setup-bundle-3.8.3-1
+############################
+[tower]
+localhost ansible_connection=local
 
-## Lets Modify the ReadMe file with this guidance information.
-### vi README.md
+[automationhub]
 
-## Verify Current Status of git - svn 
-### git status # Note : The outpur shows all those file where some modification has happened in "Red" Colour.
+[database]
 
-## Add file(s) to be marked as ready for next process.
-### git add README.md
+[all:vars]
+admin_password='password'
 
-## Verify the "git status" again and note the file(s) have turned Green indicating file(s) are ready for next step. 
-### git status
+pg_host=''
+pg_port=''
 
-## Commit the Changes for the file(s) with a message using -m
-### git commit -m "Updated readme file"
+pg_database='awx'
+pg_username='awx'
+pg_password='awx'
+pg_sslmode='prefer'  # set to 'verify-full' for client-side enforced SSL
 
-## Push changes to Github for safekeeping in a version control environment.
-### git push origin main
+# Automation Hub Configuration
+#
+
+automationhub_admin_password='awx'
+
+automationhub_pg_host=''
+automationhub_pg_port=''
+
+automationhub_pg_database='automationhub'
+automationhub_pg_username='automationhub'
+automationhub_pg_password='awx'
+automationhub_pg_sslmode='prefer'
+
+############################
+Start installation
+
+ansible tower is installed using ansible playbook, and after installation, all services are automatically pulled up and the configuration is turned on.
+
+./setup.sh
+
+Visit Ansible Tower
+
+access https://192.168.1.16/#/login Log in (admin/password)
+
+If, this is your first time login, you need to subscribe to license after login. Use your redhat login ID and password to obtain the trial licence.
+
+Once the trial licence is obtained  follow below.
+Ansible Tower License
+
+Test and print log output in 
+/var/log/supervisor/awx-callback-receiver.log
+
+Backup licensing.py
+
+cp /var/lib/awx/venv/awx/lib/python3.6/site-packages/awx/main/utils/licensing.py{,.bak} ./
+
+Edit licensing.py
+
+vim /var/lib/awx/venv/awx/lib/python3.6/site-packages/awx/main/utils/licensing.py
+
+At the end of the documentvalidate Method, replace (Python PEP8 grammar rule) with the following
+###########################
