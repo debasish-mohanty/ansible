@@ -103,7 +103,7 @@ Once the trial licence is obtained  follow below.
 
 > vim /var/lib/awx/venv/awx/lib/python3.6/site-packages/awx/main/utils/licensing.py
 
-At the end of the documentvalidate Method, replace (Python PEP8 grammar rule) with the following
+At the end of the documentvalidate Method, replace with the following
 ```
 def validate(self):
         # Return license attributes with additional validation info.
